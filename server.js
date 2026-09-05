@@ -12,6 +12,37 @@ app.use(express.json());
 
 // Default Route
 
+
+const jwt = require('jsonwebtoken');
+
+// --- Auth Middleware ---
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (token == null) return res.status(401).json({ error: 'Unauthorized' });
+
+    jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret', (err, user) => {
+        if (err) return res.status(403).json({ error: 'Forbidden' });
+        req.user = user;
+        next();
+    });
+};
+
+// --- Login Route ---
+app.post('/api/login', (req, res) => {
+    const { email, password } = req.body;
+    const adminEmail = process.env.ADMIN_EMAIL || 'azadozalive@admin.com';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'AOLadmin@123';
+
+    if (email === adminEmail && password === adminPassword) {
+        const token = jwt.sign({ role: 'admin' }, process.env.JWT_SECRET || 'fallback_secret', { expiresIn: '24h' });
+        res.json({ token });
+    } else {
+        res.status(401).json({ error: 'Invalid email or password' });
+    }
+});
+
 app.get('/test-db', async (req, res) => {
     try {
         await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000 });
@@ -96,7 +127,7 @@ const upload = multer({ storage: storage });
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // File Upload Route
-app.post('/api/upload', upload.single('image'), (req, res) => {
+app.post('/api/upload', authenticateToken, upload.single('image'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
     }
@@ -113,7 +144,7 @@ app.get('/api/ads', async (req, res) => {
     }
 });
 
-app.post('/api/ads', async (req, res) => {
+app.post('/api/ads', authenticateToken, async (req, res) => {
     try {
         const newAd = new Ad(req.body);
         const savedAd = await newAd.save();
@@ -123,7 +154,7 @@ app.post('/api/ads', async (req, res) => {
     }
 });
 
-app.delete('/api/ads/:id', async (req, res) => {
+app.delete('/api/ads/:id', authenticateToken, async (req, res) => {
     try {
         await Ad.findByIdAndDelete(req.params.id);
         res.json({ message: 'Ad deleted successfully' });
@@ -132,7 +163,7 @@ app.delete('/api/ads/:id', async (req, res) => {
     }
 });
 
-app.put('/api/ads/:id', async (req, res) => {
+app.put('/api/ads/:id', authenticateToken, async (req, res) => {
     try {
         const updatedAd = await Ad.findByIdAndUpdate(
             req.params.id,
@@ -155,7 +186,7 @@ app.get('/api/news', async (req, res) => {
     }
 });
 
-app.post('/api/news', async (req, res) => {
+app.post('/api/news', authenticateToken, async (req, res) => {
     try {
         const newNews = new News(req.body);
         const savedNews = await newNews.save();
@@ -165,7 +196,7 @@ app.post('/api/news', async (req, res) => {
     }
 });
 
-app.delete('/api/news/:id', async (req, res) => {
+app.delete('/api/news/:id', authenticateToken, async (req, res) => {
     try {
         await News.findByIdAndDelete(req.params.id);
         res.json({ message: 'News deleted successfully' });
@@ -174,7 +205,7 @@ app.delete('/api/news/:id', async (req, res) => {
     }
 });
 
-app.put('/api/news/:id', async (req, res) => {
+app.put('/api/news/:id', authenticateToken, async (req, res) => {
     try {
         const updatedNews = await News.findByIdAndUpdate(
             req.params.id, 
