@@ -11,6 +11,16 @@ app.use(cors());
 app.use(express.json());
 
 // Default Route
+
+app.get('/test-db', async (req, res) => {
+    try {
+        await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000 });
+        res.json({ status: 'connected to mongo successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message, stack: err.stack });
+    }
+});
+
 app.get('/debug-env', (req, res) => { res.json({ hasMongo: !!process.env.MONGO_URI, prefix: process.env.MONGO_URI ? process.env.MONGO_URI.substring(0, 15) : null }); });
 app.get('/', (req, res) => {
     res.send('API is running successfully on Vercel!');
