@@ -18,6 +18,11 @@ async function connectDB() {
   return cached.conn;
 }
 
+
+const cors = require('cors');
+require('dotenv').config();
+
+const app = express();
 // Ensure DB is connected before handling any requests
 app.use(async (req, res, next) => {
     try {
@@ -27,11 +32,6 @@ app.use(async (req, res, next) => {
         res.status(500).json({ error: 'DB Connection Failed: ' + e.message });
     }
 });
-
-const cors = require('cors');
-require('dotenv').config();
-
-const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
