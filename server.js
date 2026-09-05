@@ -1,5 +1,33 @@
 const express = require('express');
 const mongoose = require('mongoose');
+
+let cached = global.mongoose;
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
+async function connectDB() {
+  if (cached.conn) return cached.conn;
+  if (!cached.promise) {
+    cached.promise = mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    }).then((mongoose) => mongoose);
+  }
+  cached.conn = await cached.promise;
+  return cached.conn;
+}
+
+// Ensure DB is connected before handling any requests
+app.use(async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (e) {
+        res.status(500).json({ error: 'DB Connection Failed: ' + e.message });
+    }
+});
+
 const cors = require('cors');
 require('dotenv').config();
 
